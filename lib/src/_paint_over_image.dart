@@ -35,6 +35,7 @@ class ImagePainter extends StatefulWidget {
     this.undoIcon,
     this.isSignature = false,
     this.controlsAtTop = true,
+    this.simpleControls = false,
     this.signatureBackgroundColor,
     this.colors,
     this.initialPaintMode,
@@ -44,6 +45,9 @@ class ImagePainter extends StatefulWidget {
     this.onStrokeWidthChanged,
     this.onPaintModeChanged,
     this.textDelegate,
+    this.signatureLabel,
+    this.textPainter,
+    this.didCaptureSignature,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -67,6 +71,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -88,6 +96,10 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -112,6 +124,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -133,6 +148,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -157,6 +175,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -178,6 +200,10 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -202,6 +228,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -223,6 +252,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -242,6 +274,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -260,6 +295,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -322,6 +360,9 @@ class ImagePainter extends StatefulWidget {
   //the initial color
   final Color? initialColor;
 
+  // only display undo and clear button
+  final bool simpleControls;
+
   final ValueChanged<Color>? onColorChanged;
 
   final ValueChanged<double>? onStrokeWidthChanged;
@@ -330,6 +371,15 @@ class ImagePainter extends StatefulWidget {
 
   //the text delegate
   final TextDelegate? textDelegate;
+
+  // signature label
+  final String? signatureLabel;
+
+  // painter for text field
+  final Paint? textPainter;
+
+  // callback to handle if signature was captured
+  final ValueChanged<bool>? didCaptureSignature;
 
   @override
   ImagePainterState createState() => ImagePainterState();
@@ -346,6 +396,11 @@ class ImagePainterState extends State<ImagePainter> {
 
   int _strokeMultiplier = 1;
   late TextDelegate textDelegate;
+
+  int _signatureIndex = -1;
+  bool _isDisposed = false;
+  Offset? midPoint;
+
   @override
   void initState() {
     super.initState();
@@ -371,7 +426,22 @@ class ImagePainterState extends State<ImagePainter> {
   }
 
   @override
+  void didUpdateWidget(ImagePainter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_controller.paintHistory.length > 0) {
+      // compare old text with new
+      // if not same, remove last entry
+      // and re-enter text
+      if (widget.signatureLabel != null && midPoint != null) {
+        drawSignatureLabel();
+      }
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
     _controller.dispose();
     _isLoaded.dispose();
     _textController.dispose();
@@ -436,7 +506,7 @@ class ImagePainterState extends State<ImagePainter> {
   Future<ui.Image> _convertImage(Uint8List img) async {
     final completer = Completer<ui.Image>();
     ui.decodeImageFromList(img, (image) {
-      _isLoaded.value = true;
+      if (!_isDisposed) _isLoaded.value = true;
       return completer.complete(image);
     });
     return completer.future;
@@ -451,6 +521,85 @@ class ImagePainterState extends State<ImagePainter> {
     final imageInfo = await completer.future;
     _isLoaded.value = true;
     return imageInfo.image;
+  }
+
+  Offset getMidPoint() {
+    // ignore: omit_local_variable_types
+    List<Offset?> offsets = <Offset?>[];
+    for (var history in _controller.paintHistory) {
+      if (history.offset != null) {
+        offsets.addAll(history.offset!);
+      }
+    }
+
+    // ignore: omit_local_variable_types
+    double averageY = 0;
+
+    // ignore: omit_local_variable_types
+    double maxX = 0;
+    // ignore: omit_local_variable_types
+    double maxY = 0;
+    // ignore: omit_local_variable_types
+    double minX = 0;
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (maxX < offset.dx) {
+        maxX = offset.dx;
+      }
+      if (maxY < offset.dy) {
+        maxY = offset.dy;
+      }
+      averageY += offset.dy;
+    }
+    minX = maxX;
+
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (minX > offset.dx) {
+        minX = offset.dx;
+      }
+    }
+
+    averageY = averageY / (offsets.length - 1);
+
+    var midPoint = Offset(
+      maxX - ((maxX - minX) / 2),
+      averageY + (maxY - averageY) / 2,
+    );
+
+    this.midPoint = midPoint;
+
+    return midPoint;
+  }
+
+  void drawSignatureLabel() {
+    if (_signatureIndex != -1) {
+      _controller.paintHistory.removeAt(_signatureIndex);
+    }
+    _signatureIndex = _controller.paintHistory.length;
+    _addPaintHistory(
+      PaintInfo(
+        mode: PaintMode.text,
+        text: widget.signatureLabel,
+        paint: widget.textPainter ?? _paint,
+        offset: [
+          if (_controller.paintHistory.length > 0) getMidPoint(),
+        ],
+      ),
+    );
+  }
+
+  void reset() {
+    _controller.paintHistory.clear();
+    _signatureIndex = -1;
+    if (widget.didCaptureSignature != null) {
+      widget.didCaptureSignature?.call(
+        _controller.paintHistory.length > 0,
+      );
+    }
+    setState(() {});
   }
 
   @override
@@ -562,12 +711,26 @@ class ImagePainterState extends State<ImagePainter> {
                   tooltip: textDelegate.undo,
                   icon: widget.undoIcon ??
                       Icon(Icons.reply, color: Colors.grey[700]),
-                  onPressed: () => _controller.undo()),
+                  onPressed: () {
+                    if (_controller.paintHistory.isNotEmpty) {
+                      setState(_controller.paintHistory.removeLast);
+                      if (_controller.paintHistory.isEmpty) {
+                        reset();
+                      }
+                    }
+                    if (widget.didCaptureSignature != null) {
+                      widget.didCaptureSignature?.call(
+                        _controller.paintHistory.length > 0,
+                      );
+                    }
+
+                    // _controller.undo();
+                  }),
               IconButton(
                 tooltip: textDelegate.clearAllProgress,
                 icon: widget.clearAllIcon ??
                     Icon(Icons.clear, color: Colors.grey[700]),
-                onPressed: () => _controller.clear(),
+                onPressed: reset,
               ),
             ],
           ),
@@ -602,6 +765,10 @@ class ImagePainterState extends State<ImagePainter> {
           .lastWhere((element) => element.mode == PaintMode.text)
           .offset = [_zoomAdjustedOffset];
     }
+
+    if (onUpdate.pointerCount > 1 || onUpdate.scale != 1.0) {
+      reset();
+    }
   }
 
   ///Fires when user stops interacting with the screen.
@@ -612,6 +779,15 @@ class ImagePainterState extends State<ImagePainter> {
         (_controller.mode == PaintMode.freeStyle)) {
       _controller.addOffsets(null);
       _addFreeStylePoints();
+      if (widget.didCaptureSignature != null) {
+        widget.didCaptureSignature?.call(
+          _controller.paintHistory.length > 0,
+        );
+      }
+
+      if (widget.signatureLabel != null) {
+        drawSignatureLabel();
+      }
       _controller.offsets.clear();
     } else if (_controller.start != null &&
         _controller.end != null &&
@@ -783,69 +959,90 @@ class ImagePainterState extends State<ImagePainter> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(4),
-      color: Colors.grey[200],
+      color: widget.simpleControls ? Colors.transparent : Colors.grey[200],
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              final icon = paintModes(textDelegate)
-                  .firstWhere((item) => item.mode == _controller.mode)
-                  .icon;
-              return PopupMenuButton(
-                tooltip: textDelegate.changeMode,
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                icon: Icon(icon, color: Colors.grey[700]),
-                itemBuilder: (_) => [_showOptionsRow()],
-              );
-            },
-          ),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              return PopupMenuButton(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                tooltip: textDelegate.changeColor,
-                icon: widget.colorIcon ??
-                    Container(
-                      padding: const EdgeInsets.all(2.0),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                        color: _controller.color,
+          widget.simpleControls
+              ? Container()
+              : AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, __) {
+                    final icon = paintModes(textDelegate)
+                        .firstWhere((item) => item.mode == _controller.mode)
+                        .icon;
+                    return PopupMenuButton(
+                      tooltip: textDelegate.changeMode,
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
                       ),
-                    ),
-                itemBuilder: (_) => [_showColorPicker()],
-              );
-            },
-          ),
-          PopupMenuButton(
-            tooltip: textDelegate.changeBrushSize,
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon:
-                widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
-            itemBuilder: (_) => [_showRangeSlider()],
-          ),
-          IconButton(
-              icon: const Icon(Icons.text_format), onPressed: _openTextDialog),
+                      icon: Icon(icon, color: Colors.grey[700]),
+                      itemBuilder: (_) => [_showOptionsRow()],
+                    );
+                  },
+                ),
+          widget.simpleControls
+              ? Container()
+              : AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, __) {
+                    return PopupMenuButton(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      tooltip: textDelegate.changeColor,
+                      icon: widget.colorIcon ??
+                          Container(
+                            padding: const EdgeInsets.all(2.0),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey),
+                              color: _controller.color,
+                            ),
+                          ),
+                      itemBuilder: (_) => [_showColorPicker()],
+                    );
+                  },
+                ),
+          widget.simpleControls
+              ? Container()
+              : PopupMenuButton(
+                  tooltip: textDelegate.changeBrushSize,
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  icon: widget.brushIcon ??
+                      Icon(Icons.brush, color: Colors.grey[700]),
+                  itemBuilder: (_) => [_showRangeSlider()],
+                ),
+          widget.simpleControls
+              ? Container()
+              : IconButton(
+                  icon: const Icon(Icons.text_format),
+                  onPressed: _openTextDialog),
           const Spacer(),
           IconButton(
             tooltip: textDelegate.undo,
             icon: widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
-            onPressed: () => _controller.undo(),
+            onPressed: () {
+              if (_controller.paintHistory.isNotEmpty) {
+                setState(_controller.paintHistory.removeLast);
+                if (_controller.paintHistory.isEmpty) {
+                  reset();
+                }
+              }
+              if (widget.didCaptureSignature != null) {
+                widget.didCaptureSignature?.call(
+                  _controller.paintHistory.length > 0,
+                );
+              }
+            },
           ),
           IconButton(
             tooltip: textDelegate.clearAllProgress,
             icon: widget.clearAllIcon ??
                 Icon(Icons.clear, color: Colors.grey[700]),
-            onPressed: () => _controller.clear(),
+            onPressed: reset,
           ),
         ],
       ),
