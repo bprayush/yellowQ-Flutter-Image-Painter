@@ -481,8 +481,7 @@ class ImagePainterState extends State<ImagePainter> {
         children: [
           if (widget.controlsAtTop) _buildControls(),
           Expanded(
-            child: FittedBox(
-              alignment: FractionalOffset.center,
+            child: ClipRect(
               child: ValueListenableBuilder<Controller>(
                 valueListenable: _controller,
                 builder: (_, controller, __) {
@@ -497,7 +496,9 @@ class ImagePainterState extends State<ImagePainter> {
                         _scaleEndGesture(details, controller),
                     child: CustomPaint(
                       size: Size(
-                          _image!.width.toDouble(), _image!.height.toDouble()),
+                        _image!.width.toDouble(),
+                        _image!.height.toDouble(),
+                      ),
                       willChange: true,
                       isComplex: true,
                       painter: DrawImage(
@@ -506,10 +507,11 @@ class ImagePainterState extends State<ImagePainter> {
                         paintHistory: _paintHistory,
                         isDragging: _inDrag,
                         update: UpdatePoints(
-                            start: _start,
-                            end: _end,
-                            painter: _painter,
-                            mode: controller.mode),
+                          start: _start,
+                          end: _end,
+                          painter: _painter,
+                          mode: controller.mode,
+                        ),
                       ),
                     ),
                   );

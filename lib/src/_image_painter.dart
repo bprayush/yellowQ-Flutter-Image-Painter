@@ -61,6 +61,7 @@ class DrawImage extends CustomPainter {
     for (var item in paintHistory!) {
       final _offset = item.offset;
       final _painter = item.painter;
+
       switch (item.mode) {
         case PaintMode.rect:
           canvas.drawRect(
