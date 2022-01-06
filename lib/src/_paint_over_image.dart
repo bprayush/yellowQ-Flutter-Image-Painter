@@ -20,32 +20,33 @@ export '_image_painter.dart';
 ///[ImagePainter] widget.
 @immutable
 class ImagePainter extends StatefulWidget {
-  const ImagePainter._(
-      {Key? key,
-      this.assetPath,
-      this.networkUrl,
-      this.byteArray,
-      this.file,
-      this.height,
-      this.width,
-      this.placeHolder,
-      this.isScalable,
-      this.brushIcon,
-      this.clearAllIcon,
-      this.colorIcon,
-      this.undoIcon,
-      this.isSignature = false,
-      this.controlsAtTop = true,
-      this.signatureBackgroundColor,
-      this.colors,
-      this.initialPaintMode,
-      this.initialStrokeWidth,
-      this.initialColor,
-      this.onColorChanged,
-      this.onStrokeWidthChanged,
-      this.onPaintModeChanged,
-      this.textDelegate})
-      : super(key: key);
+  const ImagePainter._({
+    Key? key,
+    this.assetPath,
+    this.networkUrl,
+    this.byteArray,
+    this.file,
+    this.height,
+    this.width,
+    this.placeHolder,
+    this.isScalable,
+    this.brushIcon,
+    this.clearAllIcon,
+    this.colorIcon,
+    this.undoIcon,
+    this.isSignature = false,
+    this.controlsAtTop = true,
+    this.simpleControls = false,
+    this.signatureBackgroundColor,
+    this.colors,
+    this.initialPaintMode,
+    this.initialStrokeWidth,
+    this.initialColor,
+    this.onColorChanged,
+    this.onStrokeWidthChanged,
+    this.onPaintModeChanged,
+    this.textDelegate,
+  }) : super(key: key);
 
   ///Constructor for loading image from network url.
   factory ImagePainter.network(
@@ -67,6 +68,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -87,6 +89,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
     );
   }
 
@@ -110,6 +113,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -130,6 +134,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
     );
   }
 
@@ -153,6 +158,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -173,6 +179,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
     );
   }
 
@@ -196,6 +203,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -216,6 +224,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
     );
   }
 
@@ -234,6 +243,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -251,6 +261,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
     );
   }
 
@@ -312,6 +323,9 @@ class ImagePainter extends StatefulWidget {
 
   //the initial color
   final Color? initialColor;
+
+  // only display undo and clear button
+  final bool simpleControls;
 
   final ValueChanged<Color>? onColorChanged;
 
@@ -784,57 +798,70 @@ class ImagePainterState extends State<ImagePainter> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(4),
-      color: Colors.grey[200],
+      color: widget.simpleControls ? Colors.transparent : Colors.grey[200],
       child: Row(
         children: [
-          ValueListenableBuilder<Controller>(
-              valueListenable: _controller,
-              builder: (_, _ctrl, __) {
-                return PopupMenuButton(
-                  tooltip: textDelegate.changeMode,
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  icon: Icon(
-                      paintModes(textDelegate)
-                          .firstWhere((item) => item.mode == _ctrl.mode)
-                          .icon,
-                      color: Colors.grey[700]),
-                  itemBuilder: (_) => [_showOptionsRow(_ctrl)],
-                );
-              }),
-          ValueListenableBuilder<Controller>(
-              valueListenable: _controller,
-              builder: (_, controller, __) {
-                return PopupMenuButton(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+          widget.simpleControls
+              ? Container()
+              : ValueListenableBuilder<Controller>(
+                  valueListenable: _controller,
+                  builder: (_, _ctrl, __) {
+                    return PopupMenuButton(
+                      tooltip: textDelegate.changeMode,
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      icon: Icon(
+                          paintModes(textDelegate)
+                              .firstWhere((item) => item.mode == _ctrl.mode)
+                              .icon,
+                          color: Colors.grey[700]),
+                      itemBuilder: (_) => [_showOptionsRow(_ctrl)],
+                    );
+                  }),
+          widget.simpleControls
+              ? Container()
+              : ValueListenableBuilder<Controller>(
+                  valueListenable: _controller,
+                  builder: (_, controller, __) {
+                    return PopupMenuButton(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      tooltip: textDelegate.changeColor,
+                      icon: widget.colorIcon ??
+                          Container(
+                            padding: const EdgeInsets.all(2.0),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey),
+                              color: controller.color,
+                            ),
+                          ),
+                      itemBuilder: (_) => [_showColorPicker(controller)],
+                    );
+                  }),
+          widget.simpleControls
+              ? Container()
+              : PopupMenuButton(
+                  tooltip: textDelegate.changeBrushSize,
                   shape: ContinuousRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  tooltip: textDelegate.changeColor,
-                  icon: widget.colorIcon ??
-                      Container(
-                        padding: const EdgeInsets.all(2.0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey),
-                          color: controller.color,
-                        ),
+                  icon: widget.brushIcon ??
+                      Icon(
+                        Icons.brush,
+                        color: Colors.grey[700],
                       ),
-                  itemBuilder: (_) => [_showColorPicker(controller)],
-                );
-              }),
-          PopupMenuButton(
-            tooltip: textDelegate.changeBrushSize,
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon:
-                widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
-            itemBuilder: (_) => [_showRangeSlider()],
-          ),
-          IconButton(
-              icon: const Icon(Icons.text_format), onPressed: _openTextDialog),
+                  itemBuilder: (_) => [_showRangeSlider()],
+                ),
+          widget.simpleControls
+              ? Container()
+              : IconButton(
+                  icon: const Icon(Icons.text_format),
+                  onPressed: _openTextDialog,
+                ),
           const Spacer(),
           IconButton(
               tooltip: textDelegate.undo,

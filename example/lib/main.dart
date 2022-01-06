@@ -85,6 +85,7 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
         textDelegate: DutchTextDelegate(),
         initialColor: Colors.green,
         initialPaintMode: PaintMode.line,
+        simpleControls: true,
       ),
     );
   }
