@@ -607,7 +607,6 @@ class ImagePainterState extends State<ImagePainter> {
   }
 
   _scaleStartGesture(ScaleStartDetails onStart) {
-    print('SCALE START GESTURE');
     if (!widget.isSignature) {
       setState(() {
         _start = onStart.focalPoint;
@@ -618,7 +617,6 @@ class ImagePainterState extends State<ImagePainter> {
 
   ///Fires while user is interacting with the screen to record painting.
   void _scaleUpdateGesture(ScaleUpdateDetails onUpdate, Controller ctrl) {
-    print('SCALE UPDATE GESTURE');
     setState(
       () {
         _inDrag = true;
@@ -639,7 +637,6 @@ class ImagePainterState extends State<ImagePainter> {
 
   ///Fires when user stops interacting with the screen.
   void _scaleEndGesture(ScaleEndDetails onEnd, Controller controller) {
-    print('SCALE END GESTURE');
     setState(() {
       _inDrag = false;
       if (_start != null &&
