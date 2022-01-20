@@ -371,8 +371,11 @@ class ImagePainterState extends State<ImagePainter> {
     textDelegate = widget.textDelegate ?? TextDelegate();
   }
 
+  bool _isDisposed = false;
+
   @override
   void dispose() {
+    _isDisposed = true;
     _controller.dispose();
     _isLoaded.dispose();
     _textController.dispose();
@@ -435,7 +438,11 @@ class ImagePainterState extends State<ImagePainter> {
   Future<ui.Image> _convertImage(Uint8List img) async {
     final completer = Completer<ui.Image>();
     ui.decodeImageFromList(img, (image) {
-      _isLoaded.value = true;
+      try {
+        if (!_isDisposed) _isLoaded.value = true;
+      } catch (e) {
+        //
+      }
       return completer.complete(image);
     });
     return completer.future;
