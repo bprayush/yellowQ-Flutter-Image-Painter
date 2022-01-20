@@ -481,41 +481,44 @@ class ImagePainterState extends State<ImagePainter> {
         children: [
           if (widget.controlsAtTop) _buildControls(),
           Expanded(
-            child: ClipRect(
-              child: ValueListenableBuilder<Controller>(
-                valueListenable: _controller,
-                builder: (_, controller, __) {
-                  return ImagePainterTransformer(
-                    maxScale: 2.4,
-                    minScale: 1,
-                    panEnabled: controller.mode == PaintMode.none,
-                    scaleEnabled: widget.isScalable!,
-                    onInteractionUpdate: (details) =>
-                        _scaleUpdateGesture(details, controller),
-                    onInteractionEnd: (details) =>
-                        _scaleEndGesture(details, controller),
-                    child: CustomPaint(
-                      size: Size(
-                        _image!.width.toDouble(),
-                        _image!.height.toDouble(),
-                      ),
-                      willChange: true,
-                      isComplex: true,
-                      painter: DrawImage(
-                        image: _image,
-                        points: _points,
-                        paintHistory: _paintHistory,
-                        isDragging: _inDrag,
-                        update: UpdatePoints(
-                          start: _start,
-                          end: _end,
-                          painter: _painter,
-                          mode: controller.mode,
+            child: FittedBox(
+              alignment: FractionalOffset.center,
+              child: ClipRect(
+                child: ValueListenableBuilder<Controller>(
+                  valueListenable: _controller,
+                  builder: (_, controller, __) {
+                    return ImagePainterTransformer(
+                      maxScale: 2.4,
+                      minScale: 1,
+                      panEnabled: controller.mode == PaintMode.none,
+                      scaleEnabled: widget.isScalable!,
+                      onInteractionUpdate: (details) =>
+                          _scaleUpdateGesture(details, controller),
+                      onInteractionEnd: (details) =>
+                          _scaleEndGesture(details, controller),
+                      child: CustomPaint(
+                        size: Size(
+                          _image!.width.toDouble(),
+                          _image!.height.toDouble(),
+                        ),
+                        willChange: true,
+                        isComplex: true,
+                        painter: DrawImage(
+                          image: _image,
+                          points: _points,
+                          paintHistory: _paintHistory,
+                          isDragging: _inDrag,
+                          update: UpdatePoints(
+                            start: _start,
+                            end: _end,
+                            painter: _painter,
+                            mode: controller.mode,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -597,6 +600,7 @@ class ImagePainterState extends State<ImagePainter> {
   }
 
   _scaleStartGesture(ScaleStartDetails onStart) {
+    print('SCALE START GESTURE');
     if (!widget.isSignature) {
       setState(() {
         _start = onStart.focalPoint;
@@ -607,6 +611,7 @@ class ImagePainterState extends State<ImagePainter> {
 
   ///Fires while user is interacting with the screen to record painting.
   void _scaleUpdateGesture(ScaleUpdateDetails onUpdate, Controller ctrl) {
+    print('SCALE UPDATE GESTURE');
     setState(
       () {
         _inDrag = true;
@@ -627,6 +632,7 @@ class ImagePainterState extends State<ImagePainter> {
 
   ///Fires when user stops interacting with the screen.
   void _scaleEndGesture(ScaleEndDetails onEnd, Controller controller) {
+    print('SCALE END GESTURE');
     setState(() {
       _inDrag = false;
       if (_start != null &&
