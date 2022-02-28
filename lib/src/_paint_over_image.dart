@@ -47,6 +47,7 @@ class ImagePainter extends StatefulWidget {
     this.onPaintModeChanged,
     this.textDelegate,
     this.signatureLabel,
+    this.textPainter,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -71,6 +72,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool simpleControls = false,
     String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -93,6 +95,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -118,6 +121,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool simpleControls = false,
     String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -140,6 +144,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -165,6 +170,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool simpleControls = false,
     String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -187,6 +193,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -212,6 +219,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool simpleControls = false,
     String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -234,6 +242,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -254,6 +263,7 @@ class ImagePainter extends StatefulWidget {
     TextDelegate? textDelegate,
     bool simpleControls = false,
     String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -273,6 +283,7 @@ class ImagePainter extends StatefulWidget {
       textDelegate: textDelegate,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -347,6 +358,9 @@ class ImagePainter extends StatefulWidget {
   // signature label
   final String? signatureLabel;
 
+  // painter for text field
+  final Paint? textPainter;
+
   //the text delegate
   final TextDelegate? textDelegate;
 
@@ -411,7 +425,7 @@ class ImagePainterState extends State<ImagePainter> {
           PaintInfo(
             mode: PaintMode.text,
             text: widget.signatureLabel,
-            painter: _painter,
+            painter: widget.textPainter ?? _painter,
             offset: [
               midPoint,
             ],
@@ -490,6 +504,7 @@ class ImagePainterState extends State<ImagePainter> {
     ui.decodeImageFromList(img, (image) {
       try {
         if (!_isDisposed) _isLoaded.value = true;
+        // ignore: avoid_catches_without_on_clauses
       } catch (e) {
         //
       }
@@ -720,7 +735,7 @@ class ImagePainterState extends State<ImagePainter> {
 
     var midPoint = Offset(
       maxX - ((maxX - minX) / 2),
-      maxY + 20,
+      maxY + 60,
     );
 
     this.midPoint = midPoint;
@@ -745,7 +760,7 @@ class ImagePainterState extends State<ImagePainter> {
             PaintInfo(
               mode: PaintMode.text,
               text: widget.signatureLabel,
-              painter: _painter,
+              painter: widget.textPainter ?? _painter,
               offset: [
                 if (_points.length - 2 > 0) getMidPoint(_points),
               ],
