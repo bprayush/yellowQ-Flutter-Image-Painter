@@ -82,7 +82,7 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
         initialStrokeWidth: 2,
         initialColor: Colors.green,
         initialPaintMode: PaintMode.freeStyle,
-        signatureLabel: 'Prayush\nMon Feb 28-Mon Feb 29',
+        signatureLabel: 'Prayush\nMon Feb 28-Mon Feb 31',
         // simpleControls: true,
       ),
     );

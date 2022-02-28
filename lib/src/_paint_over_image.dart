@@ -367,6 +367,9 @@ class ImagePainterState extends State<ImagePainter> {
   Offset? _start, _end;
   int _strokeMultiplier = 1;
   late TextDelegate textDelegate;
+
+  int _signatureIndex = -1;
+
   @override
   void initState() {
     super.initState();
@@ -374,12 +377,19 @@ class ImagePainterState extends State<ImagePainter> {
     _resolveAndConvertImage();
     if (widget.isSignature) {
       _controller = ValueNotifier(
-          const Controller(mode: PaintMode.freeStyle, color: Colors.black));
+        const Controller(
+          mode: PaintMode.freeStyle,
+          color: Colors.black,
+        ),
+      );
     } else {
-      _controller = ValueNotifier(const Controller().copyWith(
+      _controller = ValueNotifier(
+        const Controller().copyWith(
           mode: widget.initialPaintMode,
           strokeWidth: widget.initialStrokeWidth,
-          color: widget.initialColor));
+          color: widget.initialColor,
+        ),
+      );
     }
     _textController = TextEditingController();
     textDelegate = widget.textDelegate ?? TextDelegate();
@@ -392,7 +402,9 @@ class ImagePainterState extends State<ImagePainter> {
       // compare old text with new
       // if not same, remove last entry
       // and re-enter text
-      _paintHistory.removeLast();
+      if (_signatureIndex != -1) {
+        _paintHistory.removeAt(_signatureIndex);
+      }
       setState(() {});
       if (widget.signatureLabel != null && midPoint != null) {
         _addPaintHistory(
@@ -728,6 +740,7 @@ class ImagePainterState extends State<ImagePainter> {
         _addFreeStylePoints();
         if (_firstInteraction && widget.signatureLabel != null) {
           _firstInteraction = false;
+          _signatureIndex = _paintHistory.length;
           _addPaintHistory(
             PaintInfo(
               mode: PaintMode.text,
@@ -984,11 +997,18 @@ class ImagePainterState extends State<ImagePainter> {
             tooltip: textDelegate.clearAllProgress,
             icon: widget.clearAllIcon ??
                 Icon(Icons.clear, color: Colors.grey[700]),
-            onPressed: () => setState(_paintHistory.clear),
+            onPressed: reset,
           ),
         ],
       ),
     );
+  }
+
+  void reset() {
+    _paintHistory.clear();
+    _firstInteraction = true;
+    _signatureIndex = -1;
+    setState(() {});
   }
 }
 
