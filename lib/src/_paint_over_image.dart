@@ -46,6 +46,7 @@ class ImagePainter extends StatefulWidget {
     this.onStrokeWidthChanged,
     this.onPaintModeChanged,
     this.textDelegate,
+    this.signatureLabel,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -69,6 +70,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool simpleControls = false,
+    String? signatureLabel,
   }) {
     return ImagePainter._(
       key: key,
@@ -90,6 +92,7 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
     );
   }
 
@@ -114,6 +117,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool simpleControls = false,
+    String? signatureLabel,
   }) {
     return ImagePainter._(
       key: key,
@@ -135,6 +139,7 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
     );
   }
 
@@ -159,6 +164,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool simpleControls = false,
+    String? signatureLabel,
   }) {
     return ImagePainter._(
       key: key,
@@ -180,6 +186,7 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
     );
   }
 
@@ -204,6 +211,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool simpleControls = false,
+    String? signatureLabel,
   }) {
     return ImagePainter._(
       key: key,
@@ -225,6 +233,7 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
     );
   }
 
@@ -244,6 +253,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool simpleControls = false,
+    String? signatureLabel,
   }) {
     return ImagePainter._(
       key: key,
@@ -262,6 +272,7 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
     );
   }
 
@@ -333,6 +344,9 @@ class ImagePainter extends StatefulWidget {
 
   final ValueChanged<PaintMode>? onPaintModeChanged;
 
+  // signature label
+  final String? signatureLabel;
+
   //the text delegate
   final TextDelegate? textDelegate;
 
@@ -369,6 +383,30 @@ class ImagePainterState extends State<ImagePainter> {
     }
     _textController = TextEditingController();
     textDelegate = widget.textDelegate ?? TextDelegate();
+  }
+
+  @override
+  void didUpdateWidget(ImagePainter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_paintHistory.length > 0) {
+      // compare old text with new
+      // if not same, remove last entry
+      // and re-enter text
+      _paintHistory.removeLast();
+      setState(() {});
+      if (widget.signatureLabel != null && midPoint != null) {
+        _addPaintHistory(
+          PaintInfo(
+            mode: PaintMode.text,
+            text: widget.signatureLabel,
+            painter: _painter,
+            offset: [
+              midPoint,
+            ],
+          ),
+        );
+      }
+    }
   }
 
   bool _isDisposed = false;
@@ -615,6 +653,8 @@ class ImagePainterState extends State<ImagePainter> {
     }
   }
 
+  bool _firstInteraction = true;
+
   ///Fires while user is interacting with the screen to record painting.
   void _scaleUpdateGesture(ScaleUpdateDetails onUpdate, Controller ctrl) {
     setState(
@@ -622,7 +662,9 @@ class ImagePainterState extends State<ImagePainter> {
         _inDrag = true;
         _start ??= onUpdate.focalPoint;
         _end = onUpdate.focalPoint;
-        if (ctrl.mode == PaintMode.freeStyle) _points.add(_end);
+        if (ctrl.mode == PaintMode.freeStyle) {
+          _points.add(_end);
+        }
         if (ctrl.mode == PaintMode.text &&
             _paintHistory
                 .where((element) => element.mode == PaintMode.text)
@@ -635,6 +677,45 @@ class ImagePainterState extends State<ImagePainter> {
     );
   }
 
+  Offset? midPoint;
+
+  Offset getMidPoint(List<Offset?> offsets) {
+    // ignore: omit_local_variable_types
+    double maxX = 0;
+    // ignore: omit_local_variable_types
+    double maxY = 0;
+    // ignore: omit_local_variable_types
+    double minX = 0;
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (maxX < offset.dx) {
+        maxX = offset.dx;
+      }
+      if (maxY < offset.dy) {
+        maxY = offset.dy;
+      }
+    }
+    minX = maxX;
+
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (minX > offset.dx) {
+        minX = offset.dx;
+      }
+    }
+
+    var midPoint = Offset(
+      maxX - ((maxX - minX) / 2),
+      maxY + 20,
+    );
+
+    this.midPoint = midPoint;
+
+    return midPoint;
+  }
+
   ///Fires when user stops interacting with the screen.
   void _scaleEndGesture(ScaleEndDetails onEnd, Controller controller) {
     setState(() {
@@ -643,7 +724,21 @@ class ImagePainterState extends State<ImagePainter> {
           _end != null &&
           (controller.mode == PaintMode.freeStyle)) {
         _points.add(null);
+
         _addFreeStylePoints();
+        if (_firstInteraction && widget.signatureLabel != null) {
+          _firstInteraction = false;
+          _addPaintHistory(
+            PaintInfo(
+              mode: PaintMode.text,
+              text: widget.signatureLabel,
+              painter: _painter,
+              offset: [
+                if (_points.length - 2 > 0) getMidPoint(_points),
+              ],
+            ),
+          );
+        }
         _points.clear();
       } else if (_start != null &&
           _end != null &&
@@ -793,10 +888,13 @@ class ImagePainterState extends State<ImagePainter> {
         setState(() {
           _addPaintHistory(
             PaintInfo(
-                mode: PaintMode.text,
-                text: _textController.text,
-                painter: _painter,
-                offset: []),
+              mode: PaintMode.text,
+              text: _textController.text,
+              painter: _painter,
+              offset: [
+                const Offset(50, 50),
+              ],
+            ),
           );
         });
         _textController.clear();
@@ -878,7 +976,6 @@ class ImagePainterState extends State<ImagePainter> {
               icon:
                   widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
               onPressed: () {
-                print(_paintHistory.length);
                 if (_paintHistory.isNotEmpty) {
                   setState(_paintHistory.removeLast);
                 }
