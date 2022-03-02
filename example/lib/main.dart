@@ -84,6 +84,10 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
         initialPaintMode: PaintMode.freeStyle,
         signatureLabel: 'Prayush\nMon Feb 28-Mon Feb 31',
         textPainter: Paint()..strokeWidth = 2,
+        didCaptureSignature: (val) {
+          // ignore: avoid_print
+          print('Signature captured: $val');
+        },
         // simpleControls: true,
       ),
     );

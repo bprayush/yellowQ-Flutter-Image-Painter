@@ -74,6 +74,7 @@ class ImagePainter extends StatefulWidget {
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -97,6 +98,7 @@ class ImagePainter extends StatefulWidget {
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -662,6 +664,14 @@ class ImagePainterState extends State<ImagePainter> {
                   onPressed: () {
                     if (_paintHistory.isNotEmpty) {
                       setState(_paintHistory.removeLast);
+                      if (_paintHistory.isEmpty) {
+                        reset();
+                      }
+                    }
+                    if (widget.didCaptureSignature != null) {
+                      widget.didCaptureSignature?.call(
+                        _paintHistory.length > 0,
+                      );
                     }
                   }),
               IconButton(
@@ -758,13 +768,12 @@ class ImagePainterState extends State<ImagePainter> {
           (controller.mode == PaintMode.freeStyle)) {
         _points.add(null);
 
+        _addFreeStylePoints();
         if (widget.didCaptureSignature != null) {
           widget.didCaptureSignature?.call(
             _paintHistory.length > 0,
           );
         }
-
-        _addFreeStylePoints();
         if (_firstInteraction && widget.signatureLabel != null) {
           _firstInteraction = false;
           _signatureIndex = _paintHistory.length;
@@ -1018,6 +1027,14 @@ class ImagePainterState extends State<ImagePainter> {
               onPressed: () {
                 if (_paintHistory.isNotEmpty) {
                   setState(_paintHistory.removeLast);
+                  if (_paintHistory.isEmpty) {
+                    reset();
+                  }
+                }
+                if (widget.didCaptureSignature != null) {
+                  widget.didCaptureSignature?.call(
+                    _paintHistory.length > 0,
+                  );
                 }
               }),
           IconButton(
@@ -1035,6 +1052,11 @@ class ImagePainterState extends State<ImagePainter> {
     _paintHistory.clear();
     _firstInteraction = true;
     _signatureIndex = -1;
+    if (widget.didCaptureSignature != null) {
+      widget.didCaptureSignature?.call(
+        _paintHistory.length > 0,
+      );
+    }
     setState(() {});
   }
 }
