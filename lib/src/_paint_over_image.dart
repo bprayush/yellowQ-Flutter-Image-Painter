@@ -724,6 +724,9 @@ class ImagePainterState extends State<ImagePainter> {
 
   Offset getMidPoint(List<Offset?> offsets) {
     // ignore: omit_local_variable_types
+    double averageY = 0;
+
+    // ignore: omit_local_variable_types
     double maxX = 0;
     // ignore: omit_local_variable_types
     double maxY = 0;
@@ -738,6 +741,7 @@ class ImagePainterState extends State<ImagePainter> {
       if (maxY < offset.dy) {
         maxY = offset.dy;
       }
+      averageY += offset.dy;
     }
     minX = maxX;
 
@@ -749,9 +753,11 @@ class ImagePainterState extends State<ImagePainter> {
       }
     }
 
+    averageY = averageY / (offsets.length - 1);
+
     var midPoint = Offset(
       maxX - ((maxX - minX) / 2),
-      maxY + 60,
+      averageY + (maxY - averageY) / 2,
     );
 
     this.midPoint = midPoint;
