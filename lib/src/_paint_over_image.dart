@@ -705,7 +705,8 @@ class ImagePainterState extends State<ImagePainter> {
         _inDrag = true;
         _start ??= onUpdate.focalPoint;
         _end = onUpdate.focalPoint;
-        if (ctrl.mode == PaintMode.freeStyle) {
+
+        if (ctrl.mode == PaintMode.freeStyle && onUpdate.pointerCount == 1) {
           _points.add(_end);
         }
         if (ctrl.mode == PaintMode.text &&
@@ -715,6 +716,9 @@ class ImagePainterState extends State<ImagePainter> {
           _paintHistory
               .lastWhere((element) => element.mode == PaintMode.text)
               .offset = [_end];
+        }
+        if (onUpdate.pointerCount > 1 || onUpdate.scale != 1.0) {
+          reset();
         }
       },
     );

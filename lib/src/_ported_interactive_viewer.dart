@@ -699,6 +699,7 @@ class _ImagePainterTransformerState extends State<ImagePainterTransformer>
         ),
         scale: details.scale,
         rotation: details.rotation,
+        pointerCount: details.pointerCount,
       ));
     }
     final focalPointScene = _transformationController!.toScene(
