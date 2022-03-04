@@ -424,22 +424,10 @@ class ImagePainterState extends State<ImagePainter> {
       // compare old text with new
       // if not same, remove last entry
       // and re-enter text
-      if (_signatureIndex != -1) {
-        _paintHistory.removeAt(_signatureIndex);
+      if (widget.signatureLabel != null && midPoint != null) {
+        drawSignatureLabel();
       }
       setState(() {});
-      if (widget.signatureLabel != null && midPoint != null) {
-        _addPaintHistory(
-          PaintInfo(
-            mode: PaintMode.text,
-            text: widget.signatureLabel,
-            painter: widget.textPainter ?? _painter,
-            offset: [
-              midPoint,
-            ],
-          ),
-        );
-      }
     }
   }
 
@@ -696,8 +684,6 @@ class ImagePainterState extends State<ImagePainter> {
     }
   }
 
-  bool _firstInteraction = true;
-
   ///Fires while user is interacting with the screen to record painting.
   void _scaleUpdateGesture(ScaleUpdateDetails onUpdate, Controller ctrl) {
     setState(
@@ -726,7 +712,15 @@ class ImagePainterState extends State<ImagePainter> {
 
   Offset? midPoint;
 
-  Offset getMidPoint(List<Offset?> offsets) {
+  Offset getMidPoint() {
+    // ignore: omit_local_variable_types
+    List<Offset?> offsets = <Offset?>[];
+    for (var history in _paintHistory) {
+      if (history.offset != null) {
+        offsets.addAll(history.offset!);
+      }
+    }
+
     // ignore: omit_local_variable_types
     double averageY = 0;
 
@@ -784,19 +778,8 @@ class ImagePainterState extends State<ImagePainter> {
             _paintHistory.length > 0,
           );
         }
-        if (_firstInteraction && widget.signatureLabel != null) {
-          _firstInteraction = false;
-          _signatureIndex = _paintHistory.length;
-          _addPaintHistory(
-            PaintInfo(
-              mode: PaintMode.text,
-              text: widget.signatureLabel,
-              painter: widget.textPainter ?? _painter,
-              offset: [
-                if (_points.length - 2 > 0) getMidPoint(_points),
-              ],
-            ),
-          );
+        if (widget.signatureLabel != null) {
+          drawSignatureLabel();
         }
         _points.clear();
       } else if (_start != null &&
@@ -1058,9 +1041,25 @@ class ImagePainterState extends State<ImagePainter> {
     );
   }
 
+  void drawSignatureLabel() {
+    if (_signatureIndex != -1) {
+      _paintHistory.removeAt(_signatureIndex);
+    }
+    _signatureIndex = _paintHistory.length;
+    _addPaintHistory(
+      PaintInfo(
+        mode: PaintMode.text,
+        text: widget.signatureLabel,
+        painter: widget.textPainter ?? _painter,
+        offset: [
+          if (_paintHistory.length > 0) getMidPoint(),
+        ],
+      ),
+    );
+  }
+
   void reset() {
     _paintHistory.clear();
-    _firstInteraction = true;
     _signatureIndex = -1;
     if (widget.didCaptureSignature != null) {
       widget.didCaptureSignature?.call(

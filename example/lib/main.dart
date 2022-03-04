@@ -5,9 +5,11 @@ import 'package:image_painter/image_painter.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() => runApp(ExampleApp());
+void main() => runApp(const ExampleApp());
 
 class ExampleApp extends StatelessWidget {
+  const ExampleApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -16,12 +18,14 @@ class ExampleApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: ImagePainterExample(),
+      home: const ImagePainterExample(),
     );
   }
 }
 
 class ImagePainterExample extends StatefulWidget {
+  const ImagePainterExample({Key? key}) : super(key: key);
+
   @override
   _ImagePainterExampleState createState() => _ImagePainterExampleState();
 }
