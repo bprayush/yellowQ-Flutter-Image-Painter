@@ -61,6 +61,7 @@ class DrawImage extends CustomPainter {
     for (var item in paintHistory!) {
       final _offset = item.offset;
       final _painter = item.painter;
+
       switch (item.mode) {
         case PaintMode.rect:
           canvas.drawRect(
@@ -104,9 +105,10 @@ class DrawImage extends CustomPainter {
           final textSpan = TextSpan(
             text: item.text,
             style: TextStyle(
-                color: _painter!.color,
-                fontSize: 6 * _painter.strokeWidth,
-                fontWeight: FontWeight.bold),
+              color: _painter!.color,
+              fontSize: 6 * _painter.strokeWidth,
+              fontWeight: FontWeight.w400,
+            ),
           );
           final textPainter = TextPainter(
             text: textSpan,
@@ -119,7 +121,9 @@ class DrawImage extends CustomPainter {
                   size.height / 2 - textPainter.height / 2)
               : Offset(_offset[0]!.dx - textPainter.width / 2,
                   _offset[0]!.dy - textPainter.height / 2);
-          textPainter.paint(canvas, textOffset);
+          if (!textOffset.dx.isNaN && !textOffset.dy.isNaN) {
+            textPainter.paint(canvas, textOffset);
+          }
           break;
         default:
       }

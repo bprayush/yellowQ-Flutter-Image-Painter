@@ -20,32 +20,36 @@ export '_image_painter.dart';
 ///[ImagePainter] widget.
 @immutable
 class ImagePainter extends StatefulWidget {
-  const ImagePainter._(
-      {Key? key,
-      this.assetPath,
-      this.networkUrl,
-      this.byteArray,
-      this.file,
-      this.height,
-      this.width,
-      this.placeHolder,
-      this.isScalable,
-      this.brushIcon,
-      this.clearAllIcon,
-      this.colorIcon,
-      this.undoIcon,
-      this.isSignature = false,
-      this.controlsAtTop = true,
-      this.signatureBackgroundColor,
-      this.colors,
-      this.initialPaintMode,
-      this.initialStrokeWidth,
-      this.initialColor,
-      this.onColorChanged,
-      this.onStrokeWidthChanged,
-      this.onPaintModeChanged,
-      this.textDelegate})
-      : super(key: key);
+  const ImagePainter._({
+    Key? key,
+    this.assetPath,
+    this.networkUrl,
+    this.byteArray,
+    this.file,
+    this.height,
+    this.width,
+    this.placeHolder,
+    this.isScalable,
+    this.brushIcon,
+    this.clearAllIcon,
+    this.colorIcon,
+    this.undoIcon,
+    this.isSignature = false,
+    this.controlsAtTop = true,
+    this.simpleControls = false,
+    this.signatureBackgroundColor,
+    this.colors,
+    this.initialPaintMode,
+    this.initialStrokeWidth,
+    this.initialColor,
+    this.onColorChanged,
+    this.onStrokeWidthChanged,
+    this.onPaintModeChanged,
+    this.textDelegate,
+    this.signatureLabel,
+    this.textPainter,
+    this.didCaptureSignature,
+  }) : super(key: key);
 
   ///Constructor for loading image from network url.
   factory ImagePainter.network(
@@ -67,6 +71,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -87,6 +95,10 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -110,6 +122,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -130,6 +145,9 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -153,6 +171,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -173,6 +195,10 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -196,6 +222,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -216,6 +245,9 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -234,6 +266,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -251,6 +286,9 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -313,13 +351,25 @@ class ImagePainter extends StatefulWidget {
   //the initial color
   final Color? initialColor;
 
+  // only display undo and clear button
+  final bool simpleControls;
+
   final ValueChanged<Color>? onColorChanged;
 
   final ValueChanged<double>? onStrokeWidthChanged;
 
   final ValueChanged<PaintMode>? onPaintModeChanged;
 
-  //the text delegate
+  // signature label
+  final String? signatureLabel;
+
+  // painter for text field
+  final Paint? textPainter;
+
+  // callback to handle if signature was captured
+  final ValueChanged<bool>? didCaptureSignature;
+
+  // the text delegate
   final TextDelegate? textDelegate;
 
   @override
@@ -339,6 +389,9 @@ class ImagePainterState extends State<ImagePainter> {
   Offset? _start, _end;
   int _strokeMultiplier = 1;
   late TextDelegate textDelegate;
+
+  int _signatureIndex = -1;
+
   @override
   void initState() {
     super.initState();
@@ -346,19 +399,43 @@ class ImagePainterState extends State<ImagePainter> {
     _resolveAndConvertImage();
     if (widget.isSignature) {
       _controller = ValueNotifier(
-          const Controller(mode: PaintMode.freeStyle, color: Colors.black));
+        const Controller(
+          mode: PaintMode.freeStyle,
+          color: Colors.black,
+        ),
+      );
     } else {
-      _controller = ValueNotifier(const Controller().copyWith(
+      _controller = ValueNotifier(
+        const Controller().copyWith(
           mode: widget.initialPaintMode,
           strokeWidth: widget.initialStrokeWidth,
-          color: widget.initialColor));
+          color: widget.initialColor,
+        ),
+      );
     }
     _textController = TextEditingController();
     textDelegate = widget.textDelegate ?? TextDelegate();
   }
 
   @override
+  void didUpdateWidget(ImagePainter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_paintHistory.length > 0) {
+      // compare old text with new
+      // if not same, remove last entry
+      // and re-enter text
+      if (widget.signatureLabel != null && midPoint != null) {
+        drawSignatureLabel();
+      }
+      setState(() {});
+    }
+  }
+
+  bool _isDisposed = false;
+
+  @override
   void dispose() {
+    _isDisposed = true;
     _controller.dispose();
     _isLoaded.dispose();
     _textController.dispose();
@@ -421,7 +498,12 @@ class ImagePainterState extends State<ImagePainter> {
   Future<ui.Image> _convertImage(Uint8List img) async {
     final completer = Completer<ui.Image>();
     ui.decodeImageFromList(img, (image) {
-      _isLoaded.value = true;
+      try {
+        if (!_isDisposed) _isLoaded.value = true;
+        // ignore: avoid_catches_without_on_clauses
+      } catch (e) {
+        //
+      }
       return completer.complete(image);
     });
     return completer.future;
@@ -483,8 +565,10 @@ class ImagePainterState extends State<ImagePainter> {
                       onInteractionEnd: (details) =>
                           _scaleEndGesture(details, controller),
                       child: CustomPaint(
-                        size: Size(_image!.width.toDouble(),
-                            _image!.height.toDouble()),
+                        size: Size(
+                          _image!.width.toDouble(),
+                          _image!.height.toDouble(),
+                        ),
                         willChange: true,
                         isComplex: true,
                         painter: DrawImage(
@@ -493,10 +577,11 @@ class ImagePainterState extends State<ImagePainter> {
                           paintHistory: _paintHistory,
                           isDragging: _inDrag,
                           update: UpdatePoints(
-                              start: _start,
-                              end: _end,
-                              painter: _painter,
-                              mode: controller.mode),
+                            start: _start,
+                            end: _end,
+                            painter: _painter,
+                            mode: controller.mode,
+                          ),
                         ),
                       ),
                     );
@@ -567,6 +652,14 @@ class ImagePainterState extends State<ImagePainter> {
                   onPressed: () {
                     if (_paintHistory.isNotEmpty) {
                       setState(_paintHistory.removeLast);
+                      if (_paintHistory.isEmpty) {
+                        reset();
+                      }
+                    }
+                    if (widget.didCaptureSignature != null) {
+                      widget.didCaptureSignature?.call(
+                        _paintHistory.length > 0,
+                      );
                     }
                   }),
               IconButton(
@@ -598,7 +691,10 @@ class ImagePainterState extends State<ImagePainter> {
         _inDrag = true;
         _start ??= onUpdate.focalPoint;
         _end = onUpdate.focalPoint;
-        if (ctrl.mode == PaintMode.freeStyle) _points.add(_end);
+
+        if (ctrl.mode == PaintMode.freeStyle && onUpdate.pointerCount == 1) {
+          _points.add(_end);
+        }
         if (ctrl.mode == PaintMode.text &&
             _paintHistory
                 .where((element) => element.mode == PaintMode.text)
@@ -607,8 +703,64 @@ class ImagePainterState extends State<ImagePainter> {
               .lastWhere((element) => element.mode == PaintMode.text)
               .offset = [_end];
         }
+        if (onUpdate.pointerCount > 1 || onUpdate.scale != 1.0) {
+          reset();
+        }
       },
     );
+  }
+
+  Offset? midPoint;
+
+  Offset getMidPoint() {
+    // ignore: omit_local_variable_types
+    List<Offset?> offsets = <Offset?>[];
+    for (var history in _paintHistory) {
+      if (history.offset != null) {
+        offsets.addAll(history.offset!);
+      }
+    }
+
+    // ignore: omit_local_variable_types
+    double averageY = 0;
+
+    // ignore: omit_local_variable_types
+    double maxX = 0;
+    // ignore: omit_local_variable_types
+    double maxY = 0;
+    // ignore: omit_local_variable_types
+    double minX = 0;
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (maxX < offset.dx) {
+        maxX = offset.dx;
+      }
+      if (maxY < offset.dy) {
+        maxY = offset.dy;
+      }
+      averageY += offset.dy;
+    }
+    minX = maxX;
+
+    // ignore: omit_local_variable_types
+    for (Offset? offset in offsets) {
+      if (offset == null) continue;
+      if (minX > offset.dx) {
+        minX = offset.dx;
+      }
+    }
+
+    averageY = averageY / (offsets.length - 1);
+
+    var midPoint = Offset(
+      maxX - ((maxX - minX) / 2),
+      averageY + (maxY - averageY) / 2,
+    );
+
+    this.midPoint = midPoint;
+
+    return midPoint;
   }
 
   ///Fires when user stops interacting with the screen.
@@ -619,7 +771,16 @@ class ImagePainterState extends State<ImagePainter> {
           _end != null &&
           (controller.mode == PaintMode.freeStyle)) {
         _points.add(null);
+
         _addFreeStylePoints();
+        if (widget.didCaptureSignature != null) {
+          widget.didCaptureSignature?.call(
+            _paintHistory.length > 0,
+          );
+        }
+        if (widget.signatureLabel != null) {
+          drawSignatureLabel();
+        }
         _points.clear();
       } else if (_start != null &&
           _end != null &&
@@ -769,10 +930,13 @@ class ImagePainterState extends State<ImagePainter> {
         setState(() {
           _addPaintHistory(
             PaintInfo(
-                mode: PaintMode.text,
-                text: _textController.text,
-                painter: _painter,
-                offset: []),
+              mode: PaintMode.text,
+              text: _textController.text,
+              painter: _painter,
+              offset: [
+                const Offset(50, 50),
+              ],
+            ),
           );
         });
         _textController.clear();
@@ -784,77 +948,125 @@ class ImagePainterState extends State<ImagePainter> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(4),
-      color: Colors.grey[200],
+      color: widget.simpleControls ? Colors.transparent : Colors.grey[200],
       child: Row(
         children: [
-          ValueListenableBuilder<Controller>(
-              valueListenable: _controller,
-              builder: (_, _ctrl, __) {
-                return PopupMenuButton(
-                  tooltip: textDelegate.changeMode,
-                  shape: ContinuousRectangleBorder(
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  icon: Icon(
-                      paintModes(textDelegate)
-                          .firstWhere((item) => item.mode == _ctrl.mode)
-                          .icon,
-                      color: Colors.grey[700]),
-                  itemBuilder: (_) => [_showOptionsRow(_ctrl)],
-                );
-              }),
-          ValueListenableBuilder<Controller>(
-              valueListenable: _controller,
-              builder: (_, controller, __) {
-                return PopupMenuButton(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+          widget.simpleControls
+              ? Container()
+              : ValueListenableBuilder<Controller>(
+                  valueListenable: _controller,
+                  builder: (_, _ctrl, __) {
+                    return PopupMenuButton(
+                      tooltip: textDelegate.changeMode,
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                      icon: Icon(
+                          paintModes(textDelegate)
+                              .firstWhere((item) => item.mode == _ctrl.mode)
+                              .icon,
+                          color: Colors.grey[700]),
+                      itemBuilder: (_) => [_showOptionsRow(_ctrl)],
+                    );
+                  }),
+          widget.simpleControls
+              ? Container()
+              : ValueListenableBuilder<Controller>(
+                  valueListenable: _controller,
+                  builder: (_, controller, __) {
+                    return PopupMenuButton(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: ContinuousRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      tooltip: textDelegate.changeColor,
+                      icon: widget.colorIcon ??
+                          Container(
+                            padding: const EdgeInsets.all(2.0),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey),
+                              color: controller.color,
+                            ),
+                          ),
+                      itemBuilder: (_) => [_showColorPicker(controller)],
+                    );
+                  }),
+          widget.simpleControls
+              ? Container()
+              : PopupMenuButton(
+                  tooltip: textDelegate.changeBrushSize,
                   shape: ContinuousRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  tooltip: textDelegate.changeColor,
-                  icon: widget.colorIcon ??
-                      Container(
-                        padding: const EdgeInsets.all(2.0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey),
-                          color: controller.color,
-                        ),
+                  icon: widget.brushIcon ??
+                      Icon(
+                        Icons.brush,
+                        color: Colors.grey[700],
                       ),
-                  itemBuilder: (_) => [_showColorPicker(controller)],
-                );
-              }),
-          PopupMenuButton(
-            tooltip: textDelegate.changeBrushSize,
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon:
-                widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
-            itemBuilder: (_) => [_showRangeSlider()],
-          ),
-          IconButton(
-              icon: const Icon(Icons.text_format), onPressed: _openTextDialog),
+                  itemBuilder: (_) => [_showRangeSlider()],
+                ),
+          widget.simpleControls
+              ? Container()
+              : IconButton(
+                  icon: const Icon(Icons.text_format),
+                  onPressed: _openTextDialog,
+                ),
           const Spacer(),
           IconButton(
               tooltip: textDelegate.undo,
               icon:
                   widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
               onPressed: () {
-                print(_paintHistory.length);
                 if (_paintHistory.isNotEmpty) {
                   setState(_paintHistory.removeLast);
+                  if (_paintHistory.isEmpty) {
+                    reset();
+                  }
+                }
+                if (widget.didCaptureSignature != null) {
+                  widget.didCaptureSignature?.call(
+                    _paintHistory.length > 0,
+                  );
                 }
               }),
           IconButton(
             tooltip: textDelegate.clearAllProgress,
             icon: widget.clearAllIcon ??
                 Icon(Icons.clear, color: Colors.grey[700]),
-            onPressed: () => setState(_paintHistory.clear),
+            onPressed: reset,
           ),
         ],
       ),
     );
+  }
+
+  void drawSignatureLabel() {
+    if (_signatureIndex != -1) {
+      _paintHistory.removeAt(_signatureIndex);
+    }
+    _signatureIndex = _paintHistory.length;
+    _addPaintHistory(
+      PaintInfo(
+        mode: PaintMode.text,
+        text: widget.signatureLabel,
+        painter: widget.textPainter ?? _painter,
+        offset: [
+          if (_paintHistory.length > 0) getMidPoint(),
+        ],
+      ),
+    );
+  }
+
+  void reset() {
+    _paintHistory.clear();
+    _signatureIndex = -1;
+    if (widget.didCaptureSignature != null) {
+      widget.didCaptureSignature?.call(
+        _paintHistory.length > 0,
+      );
+    }
+    setState(() {});
   }
 }
 
