@@ -1,13 +1,10 @@
 
 analyzer:
-  strong-mode:
-    implicit-casts: false
 linter:
   rules:
     await_only_futures: true
     avoid_positional_boolean_parameters: false
     constant_identifier_names: true
-    include_file_not_found: false
 
     # STYLE
     camel_case_types: true

@@ -5,11 +5,11 @@ import 'package:image_painter/image_painter.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'dutch_text_delegate.dart';
-
-void main() => runApp(ExampleApp());
+void main() => runApp(const ExampleApp());
 
 class ExampleApp extends StatelessWidget {
+  const ExampleApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -18,12 +18,14 @@ class ExampleApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: ImagePainterExample(),
+      home: const ImagePainterExample(),
     );
   }
 }
 
 class ImagePainterExample extends StatefulWidget {
+  const ImagePainterExample({Key? key}) : super(key: key);
+
   @override
   _ImagePainterExampleState createState() => _ImagePainterExampleState();
 }
@@ -33,13 +35,13 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
   final _key = GlobalKey<ScaffoldState>();
 
   void saveImage() async {
-    final image = await _imageKey.currentState.exportImage();
+    final image = await _imageKey.currentState!.exportImage();
     final directory = (await getApplicationDocumentsDirectory()).path;
     await Directory('$directory/sample').create(recursive: true);
     final fullPath =
         '$directory/sample/${DateTime.now().millisecondsSinceEpoch}.png';
-    final imgFile = File('$fullPath');
-    imgFile.writeAsBytesSync(image);
+    final imgFile = File(fullPath);
+    imgFile.writeAsBytesSync(image!.toList());
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.grey[700],
@@ -50,7 +52,7 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
             const Text("Image Exported successfully.",
                 style: TextStyle(color: Colors.white)),
             TextButton(
-              onPressed: () => OpenFile.open("$fullPath"),
+              onPressed: () => OpenFile.open(fullPath),
               child: Text(
                 "Open",
                 style: TextStyle(
@@ -77,14 +79,20 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
           )
         ],
       ),
-      body: ImagePainter.asset(
-        "assets/sample.jpg",
+      body: ImagePainter.network(
+        "https://via.placeholder.com/728x1080.png",
         key: _imageKey,
         scalable: true,
         initialStrokeWidth: 2,
-        textDelegate: DutchTextDelegate(),
         initialColor: Colors.green,
-        initialPaintMode: PaintMode.line,
+        initialPaintMode: PaintMode.freeStyle,
+        signatureLabel: 'Prayush\nMon Feb 28-Mon Feb 31',
+        textPainter: Paint()..strokeWidth = 2,
+        didCaptureSignature: (val) {
+          // ignore: avoid_print
+          print('Signature captured: $val');
+        },
+        // simpleControls: true,
       ),
     );
   }

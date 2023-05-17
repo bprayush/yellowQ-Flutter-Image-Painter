@@ -35,6 +35,7 @@ class ImagePainter extends StatefulWidget {
     this.undoIcon,
     this.isSignature = false,
     this.controlsAtTop = true,
+    this.simpleControls = false,
     this.signatureBackgroundColor,
     this.colors,
     this.initialPaintMode,
@@ -44,6 +45,9 @@ class ImagePainter extends StatefulWidget {
     this.onStrokeWidthChanged,
     this.onPaintModeChanged,
     this.textDelegate,
+    this.signatureLabel,
+    this.textPainter,
+    this.didCaptureSignature,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -67,6 +71,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -88,6 +96,10 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -112,6 +124,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -133,6 +148,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -157,6 +175,10 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
+    ValueChanged<bool>? didCaptureSignature,
   }) {
     return ImagePainter._(
       key: key,
@@ -178,6 +200,10 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
+      didCaptureSignature: didCaptureSignature,
     );
   }
 
@@ -202,6 +228,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -223,6 +252,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -242,6 +274,9 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
     bool? controlsAtTop,
+    bool simpleControls = false,
+    String? signatureLabel,
+    Paint? textPainter,
   }) {
     return ImagePainter._(
       key: key,
@@ -260,6 +295,9 @@ class ImagePainter extends StatefulWidget {
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
       controlsAtTop: controlsAtTop ?? true,
+      simpleControls: simpleControls,
+      signatureLabel: signatureLabel,
+      textPainter: textPainter,
     );
   }
 
@@ -322,6 +360,9 @@ class ImagePainter extends StatefulWidget {
   //the initial color
   final Color? initialColor;
 
+  // only display undo and clear button
+  final bool simpleControls;
+
   final ValueChanged<Color>? onColorChanged;
 
   final ValueChanged<double>? onStrokeWidthChanged;
@@ -330,6 +371,15 @@ class ImagePainter extends StatefulWidget {
 
   //the text delegate
   final TextDelegate? textDelegate;
+
+  // signature label
+  final String? signatureLabel;
+
+  // painter for text field
+  final Paint? textPainter;
+
+  // callback to handle if signature was captured
+  final ValueChanged<bool>? didCaptureSignature;
 
   @override
   ImagePainterState createState() => ImagePainterState();
@@ -783,7 +833,7 @@ class ImagePainterState extends State<ImagePainter> {
   Widget _buildControls() {
     return Container(
       padding: const EdgeInsets.all(4),
-      color: Colors.grey[200],
+      color: widget.simpleControls ? Colors.transparent : Colors.grey[200],
       child: Row(
         children: [
           AnimatedBuilder(
