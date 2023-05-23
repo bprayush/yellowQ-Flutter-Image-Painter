@@ -92,7 +92,7 @@ class _ImagePainterExampleState extends State<ImagePainterExample> {
           // ignore: avoid_print
           print('Signature captured: $val');
         },
-        // simpleControls: true,
+        simpleControls: true,
       ),
     );
   }
