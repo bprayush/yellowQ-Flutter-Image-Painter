@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart' hide Image;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import '_controller.dart';
 import '_image_painter.dart';
-import '_ported_interactive_viewer.dart';
 import 'delegates/text_delegate.dart';
 import 'widgets/_color_widget.dart';
 import 'widgets/_mode_widget.dart';
@@ -71,6 +70,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool? controlsAtTop,
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
@@ -95,6 +95,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      controlsAtTop: controlsAtTop ?? true,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
@@ -122,6 +123,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool? controlsAtTop,
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
@@ -145,6 +147,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      controlsAtTop: controlsAtTop ?? true,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
@@ -171,6 +174,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool? controlsAtTop,
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
@@ -195,6 +199,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      controlsAtTop: controlsAtTop ?? true,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
@@ -222,6 +227,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool? controlsAtTop,
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
@@ -245,6 +251,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      controlsAtTop: controlsAtTop ?? true,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
@@ -266,6 +273,7 @@ class ImagePainter extends StatefulWidget {
     ValueChanged<Color>? onColorChanged,
     ValueChanged<double>? onStrokeWidthChanged,
     TextDelegate? textDelegate,
+    bool? controlsAtTop,
     bool simpleControls = false,
     String? signatureLabel,
     Paint? textPainter,
@@ -286,6 +294,7 @@ class ImagePainter extends StatefulWidget {
       onColorChanged: onColorChanged,
       onStrokeWidthChanged: onStrokeWidthChanged,
       textDelegate: textDelegate,
+      controlsAtTop: controlsAtTop ?? true,
       simpleControls: simpleControls,
       signatureLabel: signatureLabel,
       textPainter: textPainter,
@@ -360,6 +369,9 @@ class ImagePainter extends StatefulWidget {
 
   final ValueChanged<PaintMode>? onPaintModeChanged;
 
+  //the text delegate
+  final TextDelegate? textDelegate;
+
   // signature label
   final String? signatureLabel;
 
@@ -369,9 +381,6 @@ class ImagePainter extends StatefulWidget {
   // callback to handle if signature was captured
   final ValueChanged<bool>? didCaptureSignature;
 
-  // the text delegate
-  final TextDelegate? textDelegate;
-
   @override
   ImagePainterState createState() => ImagePainterState();
 }
@@ -380,47 +389,46 @@ class ImagePainter extends StatefulWidget {
 class ImagePainterState extends State<ImagePainter> {
   final _repaintKey = GlobalKey();
   ui.Image? _image;
-  bool _inDrag = false;
-  final _paintHistory = <PaintInfo>[];
-  final _points = <Offset?>[];
-  late final ValueNotifier<Controller> _controller;
+  late Controller _controller;
   late final ValueNotifier<bool> _isLoaded;
   late final TextEditingController _textController;
-  Offset? _start, _end;
+  late final TransformationController _transformationController;
+
   int _strokeMultiplier = 1;
   late TextDelegate textDelegate;
 
   int _signatureIndex = -1;
+  bool _isDisposed = false;
+  Offset? midPoint;
 
   @override
   void initState() {
     super.initState();
     _isLoaded = ValueNotifier<bool>(false);
-    _resolveAndConvertImage();
+    _controller = Controller();
     if (widget.isSignature) {
-      _controller = ValueNotifier(
-        const Controller(
-          mode: PaintMode.freeStyle,
-          color: Colors.black,
-        ),
+      _controller.update(
+        mode: PaintMode.freeStyle,
+        color: Colors.black,
       );
     } else {
-      _controller = ValueNotifier(
-        const Controller().copyWith(
-          mode: widget.initialPaintMode,
-          strokeWidth: widget.initialStrokeWidth,
-          color: widget.initialColor,
-        ),
+      _controller.update(
+        mode: widget.initialPaintMode,
+        strokeWidth: widget.initialStrokeWidth,
+        color: widget.initialColor,
       );
     }
+    _resolveAndConvertImage();
+
     _textController = TextEditingController();
+    _transformationController = TransformationController();
     textDelegate = widget.textDelegate ?? TextDelegate();
   }
 
   @override
   void didUpdateWidget(ImagePainter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_paintHistory.length > 0) {
+    if (_controller.paintHistory.length > 0) {
       // compare old text with new
       // if not same, remove last entry
       // and re-enter text
@@ -431,23 +439,22 @@ class ImagePainterState extends State<ImagePainter> {
     }
   }
 
-  bool _isDisposed = false;
-
   @override
   void dispose() {
     _isDisposed = true;
     _controller.dispose();
     _isLoaded.dispose();
     _textController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
-  Paint get _painter => Paint()
-    ..color = _controller.value.color
-    ..strokeWidth = _controller.value.strokeWidth * _strokeMultiplier
-    ..style = _controller.value.mode == PaintMode.dashLine
-        ? PaintingStyle.stroke
-        : _controller.value.paintStyle;
+  Paint get _paint => _controller.brush;
+
+  bool get isEdited => _controller.paintHistory.isNotEmpty;
+
+  Size get imageSize =>
+      Size(_image?.width.toDouble() ?? 0, _image?.height.toDouble() ?? 0);
 
   ///Converts the incoming image type from constructor to [ui.Image]
   Future<void> _resolveAndConvertImage() async {
@@ -492,18 +499,14 @@ class ImagePainterState extends State<ImagePainter> {
     if ((_image!.height + _image!.width) > 1000) {
       _strokeMultiplier = (_image!.height + _image!.width) ~/ 1000;
     }
+    _controller.update(strokeMultiplier: _strokeMultiplier);
   }
 
   ///Completer function to convert asset or file image to [ui.Image] before drawing on custompainter.
   Future<ui.Image> _convertImage(Uint8List img) async {
     final completer = Completer<ui.Image>();
     ui.decodeImageFromList(img, (image) {
-      try {
-        if (!_isDisposed) _isLoaded.value = true;
-        // ignore: avoid_catches_without_on_clauses
-      } catch (e) {
-        //
-      }
+      if (!_isDisposed) _isLoaded.value = true;
       return completer.complete(image);
     });
     return completer.future;
@@ -520,202 +523,10 @@ class ImagePainterState extends State<ImagePainter> {
     return imageInfo.image;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isLoaded,
-      builder: (_, loaded, __) {
-        if (loaded) {
-          return widget.isSignature ? _paintSignature() : _paintImage();
-        } else {
-          return Container(
-            height: widget.height ?? double.maxFinite,
-            width: widget.width ?? double.maxFinite,
-            child: Center(
-              child: widget.placeHolder ?? const CircularProgressIndicator(),
-            ),
-          );
-        }
-      },
-    );
-  }
-
-  ///paints image on given constrains for drawing if image is not null.
-  Widget _paintImage() {
-    return Container(
-      height: widget.height ?? double.maxFinite,
-      width: widget.width ?? double.maxFinite,
-      child: Column(
-        children: [
-          if (widget.controlsAtTop) _buildControls(),
-          Expanded(
-            child: FittedBox(
-              alignment: FractionalOffset.center,
-              child: ClipRect(
-                child: ValueListenableBuilder<Controller>(
-                  valueListenable: _controller,
-                  builder: (_, controller, __) {
-                    return ImagePainterTransformer(
-                      maxScale: 2.4,
-                      minScale: 1,
-                      panEnabled: controller.mode == PaintMode.none,
-                      scaleEnabled: widget.isScalable!,
-                      onInteractionUpdate: (details) =>
-                          _scaleUpdateGesture(details, controller),
-                      onInteractionEnd: (details) =>
-                          _scaleEndGesture(details, controller),
-                      child: CustomPaint(
-                        size: Size(
-                          _image!.width.toDouble(),
-                          _image!.height.toDouble(),
-                        ),
-                        willChange: true,
-                        isComplex: true,
-                        painter: DrawImage(
-                          image: _image,
-                          points: _points,
-                          paintHistory: _paintHistory,
-                          isDragging: _inDrag,
-                          update: UpdatePoints(
-                            start: _start,
-                            end: _end,
-                            painter: _painter,
-                            mode: controller.mode,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-          if (!widget.controlsAtTop) _buildControls(),
-          SizedBox(height: MediaQuery.of(context).padding.bottom)
-        ],
-      ),
-    );
-  }
-
-  Widget _paintSignature() {
-    return Stack(
-      children: [
-        RepaintBoundary(
-          key: _repaintKey,
-          child: ClipRect(
-            child: Container(
-              width: widget.width ?? double.maxFinite,
-              height: widget.height ?? double.maxFinite,
-              child: ValueListenableBuilder<Controller>(
-                valueListenable: _controller,
-                builder: (_, controller, __) {
-                  return ImagePainterTransformer(
-                    panEnabled: false,
-                    scaleEnabled: false,
-                    onInteractionStart: _scaleStartGesture,
-                    onInteractionUpdate: (details) =>
-                        _scaleUpdateGesture(details, controller),
-                    onInteractionEnd: (details) =>
-                        _scaleEndGesture(details, controller),
-                    child: CustomPaint(
-                      willChange: true,
-                      isComplex: true,
-                      painter: DrawImage(
-                        isSignature: true,
-                        backgroundColor: widget.signatureBackgroundColor,
-                        points: _points,
-                        paintHistory: _paintHistory,
-                        isDragging: _inDrag,
-                        update: UpdatePoints(
-                            start: _start,
-                            end: _end,
-                            painter: _painter,
-                            mode: controller.mode),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                  tooltip: textDelegate.undo,
-                  icon: widget.undoIcon ??
-                      Icon(Icons.reply, color: Colors.grey[700]),
-                  onPressed: () {
-                    if (_paintHistory.isNotEmpty) {
-                      setState(_paintHistory.removeLast);
-                      if (_paintHistory.isEmpty) {
-                        reset();
-                      }
-                    }
-                    if (widget.didCaptureSignature != null) {
-                      widget.didCaptureSignature?.call(
-                        _paintHistory.length > 0,
-                      );
-                    }
-                  }),
-              IconButton(
-                tooltip: textDelegate.clearAllProgress,
-                icon: widget.clearAllIcon ??
-                    Icon(Icons.clear, color: Colors.grey[700]),
-                onPressed: () => setState(_paintHistory.clear),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  _scaleStartGesture(ScaleStartDetails onStart) {
-    if (!widget.isSignature) {
-      setState(() {
-        _start = onStart.focalPoint;
-        _points.add(_start);
-      });
-    }
-  }
-
-  ///Fires while user is interacting with the screen to record painting.
-  void _scaleUpdateGesture(ScaleUpdateDetails onUpdate, Controller ctrl) {
-    setState(
-      () {
-        _inDrag = true;
-        _start ??= onUpdate.focalPoint;
-        _end = onUpdate.focalPoint;
-
-        if (ctrl.mode == PaintMode.freeStyle && onUpdate.pointerCount == 1) {
-          _points.add(_end);
-        }
-        if (ctrl.mode == PaintMode.text &&
-            _paintHistory
-                .where((element) => element.mode == PaintMode.text)
-                .isNotEmpty) {
-          _paintHistory
-              .lastWhere((element) => element.mode == PaintMode.text)
-              .offset = [_end];
-        }
-        if (onUpdate.pointerCount > 1 || onUpdate.scale != 1.0) {
-          reset();
-        }
-      },
-    );
-  }
-
-  Offset? midPoint;
-
   Offset getMidPoint() {
     // ignore: omit_local_variable_types
     List<Offset?> offsets = <Offset?>[];
-    for (var history in _paintHistory) {
+    for (var history in _controller.paintHistory) {
       if (history.offset != null) {
         offsets.addAll(history.offset!);
       }
@@ -763,47 +574,241 @@ class ImagePainterState extends State<ImagePainter> {
     return midPoint;
   }
 
-  ///Fires when user stops interacting with the screen.
-  void _scaleEndGesture(ScaleEndDetails onEnd, Controller controller) {
-    setState(() {
-      _inDrag = false;
-      if (_start != null &&
-          _end != null &&
-          (controller.mode == PaintMode.freeStyle)) {
-        _points.add(null);
+  void drawSignatureLabel() {
+    if (_signatureIndex != -1) {
+      _controller.paintHistory.removeAt(_signatureIndex);
+    }
+    _signatureIndex = _controller.paintHistory.length;
+    _addPaintHistory(
+      PaintInfo(
+        mode: PaintMode.text,
+        text: widget.signatureLabel,
+        paint: widget.textPainter ?? _paint,
+        offset: [
+          if (_controller.paintHistory.length > 0) getMidPoint(),
+        ],
+      ),
+    );
+  }
 
-        _addFreeStylePoints();
-        if (widget.didCaptureSignature != null) {
-          widget.didCaptureSignature?.call(
-            _paintHistory.length > 0,
+  void reset() {
+    _controller.paintHistory.clear();
+    _signatureIndex = -1;
+    if (widget.didCaptureSignature != null) {
+      widget.didCaptureSignature?.call(
+        _controller.paintHistory.length > 0,
+      );
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isLoaded,
+      builder: (_, loaded, __) {
+        if (loaded) {
+          return widget.isSignature ? _paintSignature() : _paintImage();
+        } else {
+          return Container(
+            height: widget.height ?? double.maxFinite,
+            width: widget.width ?? double.maxFinite,
+            child: Center(
+              child: widget.placeHolder ?? const CircularProgressIndicator(),
+            ),
           );
         }
-        if (widget.signatureLabel != null) {
-          drawSignatureLabel();
-        }
-        _points.clear();
-      } else if (_start != null &&
-          _end != null &&
-          controller.mode != PaintMode.text) {
-        _addEndPoints();
+      },
+    );
+  }
+
+  ///paints image on given constrains for drawing if image is not null.
+  Widget _paintImage() {
+    return Container(
+      height: widget.height ?? double.maxFinite,
+      width: widget.width ?? double.maxFinite,
+      child: Column(
+        children: [
+          if (widget.controlsAtTop) _buildControls(),
+          Expanded(
+            child: FittedBox(
+              alignment: FractionalOffset.center,
+              child: ClipRect(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return InteractiveViewer(
+                      transformationController: _transformationController,
+                      maxScale: 2.4,
+                      minScale: 1,
+                      panEnabled: _controller.mode == PaintMode.none,
+                      scaleEnabled: widget.isScalable!,
+                      onInteractionUpdate: _scaleUpdateGesture,
+                      onInteractionEnd: _scaleEndGesture,
+                      child: CustomPaint(
+                        size: imageSize,
+                        willChange: true,
+                        isComplex: true,
+                        painter: DrawImage(
+                          image: _image,
+                          controller: _controller,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          if (!widget.controlsAtTop) _buildControls(),
+          SizedBox(height: MediaQuery.of(context).padding.bottom)
+        ],
+      ),
+    );
+  }
+
+  Widget _paintSignature() {
+    return Stack(
+      children: [
+        RepaintBoundary(
+          key: _repaintKey,
+          child: ClipRect(
+            child: Container(
+              width: widget.width ?? double.maxFinite,
+              height: widget.height ?? double.maxFinite,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (_, __) {
+                  return InteractiveViewer(
+                    transformationController: _transformationController,
+                    panEnabled: false,
+                    scaleEnabled: false,
+                    onInteractionStart: _scaleStartGesture,
+                    onInteractionUpdate: _scaleUpdateGesture,
+                    onInteractionEnd: _scaleEndGesture,
+                    child: CustomPaint(
+                      willChange: true,
+                      isComplex: true,
+                      painter: DrawImage(
+                        isSignature: true,
+                        backgroundColor: widget.signatureBackgroundColor,
+                        controller: _controller,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                  tooltip: textDelegate.undo,
+                  icon: widget.undoIcon ??
+                      Icon(Icons.reply, color: Colors.grey[700]),
+                  onPressed: () {
+                    if (_controller.paintHistory.isNotEmpty) {
+                      setState(_controller.paintHistory.removeLast);
+                      if (_controller.paintHistory.isEmpty) {
+                        reset();
+                      }
+                    }
+                    if (widget.didCaptureSignature != null) {
+                      widget.didCaptureSignature?.call(
+                        _controller.paintHistory.length > 0,
+                      );
+                    }
+
+                    // _controller.undo();
+                  }),
+              IconButton(
+                tooltip: textDelegate.clearAllProgress,
+                icon: widget.clearAllIcon ??
+                    Icon(Icons.clear, color: Colors.grey[700]),
+                onPressed: reset,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  _scaleStartGesture(ScaleStartDetails onStart) {
+    final _zoomAdjustedOffset =
+        _transformationController.toScene(onStart.localFocalPoint);
+    if (!widget.isSignature) {
+      _controller.setStart(_zoomAdjustedOffset);
+      _controller.addOffsets(_zoomAdjustedOffset);
+    }
+  }
+
+  ///Fires while user is interacting with the screen to record painting.
+  void _scaleUpdateGesture(ScaleUpdateDetails onUpdate) {
+    final _zoomAdjustedOffset =
+        _transformationController.toScene(onUpdate.localFocalPoint);
+    _controller.setInProgress(true);
+    if (_controller.start == null) {
+      _controller.setStart(_zoomAdjustedOffset);
+    }
+    _controller.setEnd(_zoomAdjustedOffset);
+    if (_controller.mode == PaintMode.freeStyle) {
+      _controller.addOffsets(_zoomAdjustedOffset);
+    }
+    if (_controller.onTextUpdateMode) {
+      _controller.paintHistory
+          .lastWhere((element) => element.mode == PaintMode.text)
+          .offset = [_zoomAdjustedOffset];
+    }
+
+    if (onUpdate.pointerCount > 1 || onUpdate.scale != 1.0) {
+      reset();
+    }
+  }
+
+  ///Fires when user stops interacting with the screen.
+  void _scaleEndGesture(ScaleEndDetails onEnd) {
+    _controller.setInProgress(false);
+    if (_controller.start != null &&
+        _controller.end != null &&
+        (_controller.mode == PaintMode.freeStyle)) {
+      _controller.addOffsets(null);
+      _addFreeStylePoints();
+      if (widget.didCaptureSignature != null) {
+        widget.didCaptureSignature?.call(
+          _controller.paintHistory.length > 0,
+        );
       }
-      _start = null;
-      _end = null;
-    });
+
+      if (widget.signatureLabel != null) {
+        drawSignatureLabel();
+      }
+      _controller.offsets.clear();
+    } else if (_controller.start != null &&
+        _controller.end != null &&
+        _controller.mode != PaintMode.text) {
+      _addEndPoints();
+    }
+    _controller.resetStartAndEnd();
   }
 
   void _addEndPoints() => _addPaintHistory(
         PaintInfo(
-          offset: <Offset?>[_start, _end],
-          painter: _painter,
-          mode: _controller.value.mode,
+          offset: <Offset?>[_controller.start, _controller.end],
+          paint: _paint,
+          mode: _controller.mode,
         ),
       );
 
   void _addFreeStylePoints() => _addPaintHistory(
         PaintInfo(
-          offset: <Offset?>[..._points],
-          painter: _painter,
+          offset: <Offset?>[..._controller.offsets],
+          paint: _paint,
           mode: PaintMode.freeStyle,
         ),
       );
@@ -812,7 +817,7 @@ class ImagePainterState extends State<ImagePainter> {
   Future<ui.Image> _renderImage() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    final painter = DrawImage(image: _image, paintHistory: _paintHistory);
+    final painter = DrawImage(image: _image, controller: _controller);
     final size = Size(_image!.width.toDouble(), _image!.height.toDouble());
     painter.paint(canvas, size);
     return recorder
@@ -820,7 +825,7 @@ class ImagePainterState extends State<ImagePainter> {
         .toImage(size.width.floor(), size.height.floor());
   }
 
-  PopupMenuItem _showOptionsRow(Controller controller) {
+  PopupMenuItem _showOptionsRow() {
     return PopupMenuItem(
       enabled: false,
       child: Center(
@@ -830,13 +835,13 @@ class ImagePainterState extends State<ImagePainter> {
                 .map(
                   (item) => SelectionItems(
                     data: item,
-                    isSelected: controller.mode == item.mode,
+                    isSelected: _controller.mode == item.mode,
                     onTap: () {
                       if (widget.onPaintModeChanged != null &&
                           item.mode != null) {
                         widget.onPaintModeChanged!(item.mode!);
                       }
-                      _controller.value = controller.copyWith(mode: item.mode);
+                      _controller.setMode(item.mode!);
                       Navigator.of(context).pop();
                     },
                   ),
@@ -853,13 +858,13 @@ class ImagePainterState extends State<ImagePainter> {
       enabled: false,
       child: SizedBox(
         width: double.maxFinite,
-        child: ValueListenableBuilder<Controller>(
-          valueListenable: _controller,
-          builder: (_, ctrl, __) {
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (_, __) {
             return RangedSlider(
-              value: ctrl.strokeWidth,
+              value: _controller.strokeWidth,
               onChanged: (value) {
-                _controller.value = ctrl.copyWith(strokeWidth: value);
+                _controller.setStrokeWidth(value);
                 if (widget.onStrokeWidthChanged != null) {
                   widget.onStrokeWidthChanged!(value);
                 }
@@ -871,7 +876,7 @@ class ImagePainterState extends State<ImagePainter> {
     );
   }
 
-  PopupMenuItem _showColorPicker(Controller controller) {
+  PopupMenuItem _showColorPicker() {
     return PopupMenuItem(
         enabled: false,
         child: Center(
@@ -881,10 +886,10 @@ class ImagePainterState extends State<ImagePainter> {
             runSpacing: 10,
             children: (widget.colors ?? editorColors).map((color) {
               return ColorItem(
-                isSelected: color == controller.color,
+                isSelected: color == _controller.color,
                 color: color,
                 onTap: () {
-                  _controller.value = controller.copyWith(color: color);
+                  _controller.setColor(color);
                   if (widget.onColorChanged != null) {
                     widget.onColorChanged!(color);
                   }
@@ -904,7 +909,7 @@ class ImagePainterState extends State<ImagePainter> {
       final _boundary = _repaintKey.currentContext!.findRenderObject()
           as RenderRepaintBoundary;
       _convertedImage = await _boundary.toImage(pixelRatio: 3);
-    } else if (widget.byteArray != null && _paintHistory.isEmpty) {
+    } else if (widget.byteArray != null && _controller.paintHistory.isEmpty) {
       return widget.byteArray;
     } else {
       _convertedImage = await _renderImage();
@@ -916,33 +921,39 @@ class ImagePainterState extends State<ImagePainter> {
 
   void _addPaintHistory(PaintInfo info) {
     if (info.mode != PaintMode.none) {
-      _paintHistory.add(info);
+      _controller.addPaintInfo(info);
     }
   }
 
   void _openTextDialog() {
-    _controller.value = _controller.value.copyWith(mode: PaintMode.text);
-    final fontSize = 6 * _controller.value.strokeWidth;
+    _controller.setMode(PaintMode.text);
+    final fontSize = 6 * _controller.strokeWidth;
 
-    TextDialog.show(context, _textController, fontSize, _controller.value.color,
-        textDelegate, onFinished: () {
-      if (_textController.text != '') {
-        setState(() {
-          _addPaintHistory(
-            PaintInfo(
-              mode: PaintMode.text,
-              text: _textController.text,
-              painter: _painter,
-              offset: [
-                const Offset(50, 50),
-              ],
-            ),
+    TextDialog.show(
+      context,
+      _textController,
+      fontSize,
+      _controller.color,
+      textDelegate,
+      onFinished: (context) {
+        if (_textController.text != '') {
+          setState(
+            () {
+              _addPaintHistory(
+                PaintInfo(
+                  mode: PaintMode.text,
+                  text: _textController.text,
+                  paint: _paint,
+                  offset: [],
+                ),
+              );
+            },
           );
-        });
-        _textController.clear();
-      }
-      Navigator.pop(context);
-    });
+          _textController.clear();
+        }
+        Navigator.of(context).pop();
+      },
+    );
   }
 
   Widget _buildControls() {
@@ -953,27 +964,27 @@ class ImagePainterState extends State<ImagePainter> {
         children: [
           widget.simpleControls
               ? Container()
-              : ValueListenableBuilder<Controller>(
-                  valueListenable: _controller,
-                  builder: (_, _ctrl, __) {
+              : AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, __) {
+                    final icon = paintModes(textDelegate)
+                        .firstWhere((item) => item.mode == _controller.mode)
+                        .icon;
                     return PopupMenuButton(
                       tooltip: textDelegate.changeMode,
                       shape: ContinuousRectangleBorder(
                         borderRadius: BorderRadius.circular(40),
                       ),
-                      icon: Icon(
-                          paintModes(textDelegate)
-                              .firstWhere((item) => item.mode == _ctrl.mode)
-                              .icon,
-                          color: Colors.grey[700]),
-                      itemBuilder: (_) => [_showOptionsRow(_ctrl)],
+                      icon: Icon(icon, color: Colors.grey[700]),
+                      itemBuilder: (_) => [_showOptionsRow()],
                     );
-                  }),
+                  },
+                ),
           widget.simpleControls
               ? Container()
-              : ValueListenableBuilder<Controller>(
-                  valueListenable: _controller,
-                  builder: (_, controller, __) {
+              : AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, __) {
                     return PopupMenuButton(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: ContinuousRectangleBorder(
@@ -986,12 +997,13 @@ class ImagePainterState extends State<ImagePainter> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.grey),
-                              color: controller.color,
+                              color: _controller.color,
                             ),
                           ),
-                      itemBuilder: (_) => [_showColorPicker(controller)],
+                      itemBuilder: (_) => [_showColorPicker()],
                     );
-                  }),
+                  },
+                ),
           widget.simpleControls
               ? Container()
               : PopupMenuButton(
@@ -1000,36 +1012,32 @@ class ImagePainterState extends State<ImagePainter> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   icon: widget.brushIcon ??
-                      Icon(
-                        Icons.brush,
-                        color: Colors.grey[700],
-                      ),
+                      Icon(Icons.brush, color: Colors.grey[700]),
                   itemBuilder: (_) => [_showRangeSlider()],
                 ),
           widget.simpleControls
               ? Container()
               : IconButton(
                   icon: const Icon(Icons.text_format),
-                  onPressed: _openTextDialog,
-                ),
+                  onPressed: _openTextDialog),
           const Spacer(),
           IconButton(
-              tooltip: textDelegate.undo,
-              icon:
-                  widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
-              onPressed: () {
-                if (_paintHistory.isNotEmpty) {
-                  setState(_paintHistory.removeLast);
-                  if (_paintHistory.isEmpty) {
-                    reset();
-                  }
+            tooltip: textDelegate.undo,
+            icon: widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
+            onPressed: () {
+              if (_controller.paintHistory.isNotEmpty) {
+                setState(_controller.paintHistory.removeLast);
+                if (_controller.paintHistory.isEmpty) {
+                  reset();
                 }
-                if (widget.didCaptureSignature != null) {
-                  widget.didCaptureSignature?.call(
-                    _paintHistory.length > 0,
-                  );
-                }
-              }),
+              }
+              if (widget.didCaptureSignature != null) {
+                widget.didCaptureSignature?.call(
+                  _controller.paintHistory.length > 0,
+                );
+              }
+            },
+          ),
           IconButton(
             tooltip: textDelegate.clearAllProgress,
             icon: widget.clearAllIcon ??
@@ -1039,96 +1047,5 @@ class ImagePainterState extends State<ImagePainter> {
         ],
       ),
     );
-  }
-
-  void drawSignatureLabel() {
-    if (_signatureIndex != -1) {
-      _paintHistory.removeAt(_signatureIndex);
-    }
-    _signatureIndex = _paintHistory.length;
-    _addPaintHistory(
-      PaintInfo(
-        mode: PaintMode.text,
-        text: widget.signatureLabel,
-        painter: widget.textPainter ?? _painter,
-        offset: [
-          if (_paintHistory.length > 0) getMidPoint(),
-        ],
-      ),
-    );
-  }
-
-  void reset() {
-    _paintHistory.clear();
-    _signatureIndex = -1;
-    if (widget.didCaptureSignature != null) {
-      widget.didCaptureSignature?.call(
-        _paintHistory.length > 0,
-      );
-    }
-    setState(() {});
-  }
-}
-
-///Gives access to manipulate the essential components like [strokeWidth], [Color] and [PaintMode].
-@immutable
-class Controller {
-  ///Tracks [strokeWidth] of the [Paint] method.
-  final double strokeWidth;
-
-  ///Tracks [Color] of the [Paint] method.
-  final Color color;
-
-  ///Tracks [PaintingStyle] of the [Paint] method.
-  final PaintingStyle paintStyle;
-
-  ///Tracks [PaintMode] of the current [Paint] method.
-  final PaintMode mode;
-
-  ///Any text.
-  final String text;
-
-  ///Constructor of the [Controller] class.
-  const Controller(
-      {this.strokeWidth = 4.0,
-      this.color = Colors.red,
-      this.mode = PaintMode.line,
-      this.paintStyle = PaintingStyle.stroke,
-      this.text = ""});
-
-  @override
-  bool operator ==(Object o) {
-    if (identical(this, o)) return true;
-
-    return o is Controller &&
-        o.strokeWidth == strokeWidth &&
-        o.color == color &&
-        o.paintStyle == paintStyle &&
-        o.mode == mode &&
-        o.text == text;
-  }
-
-  @override
-  int get hashCode {
-    return strokeWidth.hashCode ^
-        color.hashCode ^
-        paintStyle.hashCode ^
-        mode.hashCode ^
-        text.hashCode;
-  }
-
-  ///copyWith Method to access immutable controller.
-  Controller copyWith(
-      {double? strokeWidth,
-      Color? color,
-      PaintMode? mode,
-      PaintingStyle? paintingStyle,
-      String? text}) {
-    return Controller(
-        strokeWidth: strokeWidth ?? this.strokeWidth,
-        color: color ?? this.color,
-        mode: mode ?? this.mode,
-        paintStyle: paintingStyle ?? paintStyle,
-        text: text ?? this.text);
   }
 }
