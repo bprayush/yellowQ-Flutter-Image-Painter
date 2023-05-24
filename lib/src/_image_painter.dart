@@ -97,9 +97,10 @@ class DrawImage extends CustomPainter {
           final textSpan = TextSpan(
             text: item.text,
             style: TextStyle(
-                color: _painter!.color,
-                fontSize: 6 * _painter.strokeWidth,
-                fontWeight: FontWeight.bold),
+              color: _painter!.color,
+              fontSize: 6 * _painter.strokeWidth,
+              fontWeight: FontWeight.w400,
+            ),
           );
           final textPainter = TextPainter(
             text: textSpan,
