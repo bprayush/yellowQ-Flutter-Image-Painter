@@ -6,6 +6,8 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 
 class SignatureExample extends StatefulWidget {
+  const SignatureExample({Key? key}) : super(key: key);
+
   @override
   _SignatureExampleState createState() => _SignatureExampleState();
 }
@@ -40,7 +42,7 @@ class _SignatureExampleState extends State<SignatureExample> {
     final directory = (await getApplicationDocumentsDirectory()).path;
     await Directory('$directory/sample').create(recursive: true);
     final fullPath = '$directory/sample/image.png';
-    final imgFile = File('$fullPath');
+    final imgFile = File(fullPath);
     imgFile.writeAsBytesSync(image!);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -52,7 +54,7 @@ class _SignatureExampleState extends State<SignatureExample> {
             const Text("Image Exported successfully.",
                 style: TextStyle(color: Colors.white)),
             TextButton(
-              onPressed: () => OpenFile.open("$fullPath"),
+              onPressed: () => OpenFile.open(fullPath),
               child: Text(
                 "Open",
                 style: TextStyle(color: Colors.blue[200]),

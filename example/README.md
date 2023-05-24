@@ -1,4 +1,4 @@
-# image_painter_example
+# example
 
 A new Flutter project.
 
